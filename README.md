@@ -60,7 +60,20 @@ find_package(JLD REQUIRED)
 By default, JLD stores downloaded libraries in:
 
 ```text
-${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/JLD-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}.dir
+${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/JLD-XXXXXXXX.dir
+```
+
+where `XXXXXXXX` is a randomly generated 8-character identifier.
+The identifier is stored in `JLD.cache` so the same directory is reused across subsequent CMake configurations.
+
+For example:
+
+```text
+build/
+└── CMakeFiles/
+    ├── JLD.cache
+    └── JLD-aB7xK92q.dir/
+        └── ...
 ```
 
 The directory can be overridden when configuring the project:

@@ -26,41 +26,6 @@ else()
 	set(_jld_classpath_sep ":")
 endif()
 
-function(_exists_url_file _URL_FILE _RESULT)
-	find_program(_CURL_EXECUTABLE curl)
-	if(NOT _CURL_EXECUTABLE)
-		set(_test_file "${CMAKE_CURRENT_BINARY_DIR}/.url-exists-test-${CMAKE_PROJECT_NAME}")
-
-		file(DOWNLOAD
-			"${_URL_FILE}"
-			"${_test_file}"
-			STATUS _status
-			TIMEOUT 30
-			INACTIVITY_TIMEOUT 10
-			QUIET
-		)
-		list(GET _status 0 _result)
-		if(_result EQUAL 0)
-			set(${_RESULT} TRUE PARENT_SCOPE)
-		else()
-			set(${_RESULT} FALSE PARENT_SCOPE)
-		endif()
-		file(REMOVE "${_test_file}")
-	else()
-		execute_process(
-			COMMAND "${_CURL_EXECUTABLE}" --head --silent --show-error --fail --location --max-time 30 "${_URL_FILE}"
-			RESULT_VARIABLE _curl_result
-			OUTPUT_QUIET
-			ERROR_QUIET
-		)
-		if(_curl_result EQUAL 0)
-			set(${_RESULT} TRUE PARENT_SCOPE)
-		else()
-			set(${_RESULT} FALSE PARENT_SCOPE)
-		endif()
-	endif()
-endfunction()
-
 function(add_java_library _TARGET_NAME)
 	set(options)
 	set(oneValueArgs URL OUTPUT_NAME VERSION SHA256 SHA1 MD5 GROUP ARTIFACT REPOSITORY)
