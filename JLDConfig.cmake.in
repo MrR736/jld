@@ -4,11 +4,8 @@
 # This file is generated from JLDConfig.cmake.in
 # Provides the JLD package for use with find_package(JLD)
 
-# Path to this package's cmake directory
-set(JLD_CMAKE_DIR "@CMAKE_INSTALL_LIBDIR@/cmake/JLD")
-
 # Include the main JLD.cmake module
-include("${JLD_CMAKE_DIR}/JLD.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/JLD.cmake")
 
 # Optional: Provide imported targets for convenience
 # These targets are created when add_java_library() is called

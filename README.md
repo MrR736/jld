@@ -1,212 +1,454 @@
 # JLD — Java Libraries Downloader for CMake
 
-JLD is a small, lightweight CMake module that allows you to **download and link Java libraries** (`.jar` files) directly inside CMake projects.
+JLD is a small, lightweight CMake module that allows you to **download and link Java libraries** (`.jar` files) directly in your CMake projects.
 
-It supports both:
-
-* Direct download URLs
-* Maven-style coordinates (`GROUP + ARTIFACT + VERSION`)
-
-JLD is designed to be simple, portable, and dependency-free — no Maven or Gradle required.
+It supports both direct URLs and Maven-style coordinates (`GROUP + ARTIFACT + VERSION`).
 
 ---
 
 ## Features
 
-* Download Java libraries from **Maven Central** or custom repositories
-* Optional **SHA256 verification** for secure downloads
-* Automatically creates **imported CMake targets** (`jld::<name>`)
-* Cross-platform **classpath handling** (`:` on Unix, `;` on Windows)
-* Simple integration with CMake Java targets
-* Lightweight and self-contained (pure CMake)
+* Download Java libraries from **Maven Central** or any custom repository.
+* Supports **SHA256, SHA1, and MD5** verification.
+* Automatically creates **CMake imported targets** (`jld::<name>`).
+* Cross-platform support for Java classpaths (`:` on Unix, `;` on Windows).
+* Retrieve Java classpaths with `java_get_classpath()`.
+* Run Java applications with `java_run()`.
+* Supports Maven-style library coordinates.
+* Optional checksum sidecar files (`.sha256`, `.sha1`, `.md5`).
+* Configurable download directory.
+* Includes optional documentation and can be packaged for installation.
 
 ---
 
 ## Requirements
 
-* **CMake ≥ 3.20**
-* **Java JDK**
-* Internet connection (for downloading dependencies)
+* CMake >= 3.20
+* Java JDK
+* Internet access when downloading libraries
 
 ---
 
 ## Installation
 
-### Option 1 — Copy into your project
-
-Copy the module into your project:
+Copy the module to your project:
 
 ```bash
-mkdir -p cmake
-cp JLD.cmake cmake/
+cp cmake/JLD.cmake /path/to/your/project/cmake/
 ```
 
-Then include it in your `CMakeLists.txt`:
+Then add the module directory to your CMake module path:
 
 ```cmake
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-include(JLD)
-```
-
----
-
-### Option 2 — System-wide installation
-
-Install it into your CMake module path:
-
-```bash
-cp JLD.cmake /usr/local/share/cmake/Modules/
-```
-
-Then simply:
-
-```cmake
-include(JLD)
-```
-
----
-
-# Usage
-
----
-
-## 1. Download a Library (Maven Coordinates)
-
-```cmake
-add_java_library(guava
-    GROUP com.google.guava
-    ARTIFACT guava
-    VERSION 33.0.0-jre
-    SHA256 <expected_hash_here>
+list(APPEND CMAKE_MODULE_PATH
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
 )
+
+include(JLD)
 ```
 
-This creates an imported target:
+You can also install JLD system-wide and use the installed CMake package:
 
-```
-jld::guava
+```cmake
+find_package(JLD REQUIRED)
 ```
 
 ---
 
-## 2. Download via Direct URL
+## Download Directory
+
+By default, JLD stores downloaded libraries in:
+
+```text
+${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/JLD-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}.dir
+```
+
+The directory can be overridden when configuring the project:
+
+```bash
+cmake -S . -B build \
+    -DJLD_FILES_DIRECTORY=/path/to/jld
+```
+
+Or from CMake:
 
 ```cmake
-add_java_library(my_lib
-    URL https://example.com/my-lib.jar
-    SHA256 <expected_hash_here>
+set(
+    JLD_FILES_DIRECTORY
+    "${CMAKE_CURRENT_BINARY_DIR}/jld"
+    CACHE PATH "Directory containing downloaded Java libraries"
 )
 ```
 
 ---
 
-## 3. Add Multiple Libraries
+## Download a Library from a URL
+
+A library can be downloaded directly using `URL`:
+
+```cmake
+add_java_library(aislib
+    URL "https://repo1.maven.org/maven2/aislib/aislib/0.5.2/aislib-0.5.2.jar"
+    SHA256 "..."
+)
+```
+
+This creates the imported target:
+
+```text
+jld::aislib
+```
+
+The downloaded JAR can be accessed through the target property:
+
+```cmake
+get_target_property(
+    AISLIB_JAR
+    jld::aislib
+    JLD_JAR
+)
+
+message(STATUS "AISLIB JAR: ${AISLIB_JAR}")
+```
+
+---
+
+## Maven Coordinates
+
+JLD supports Maven-style coordinates:
+
+```cmake
+add_java_library(aislib
+    GROUP aislib
+    ARTIFACT aislib
+    VERSION 0.5.2
+    SHA256 "..."
+)
+```
+
+The equivalent Maven URL is:
+
+```text
+https://repo1.maven.org/maven2/aislib/aislib/0.5.2/aislib-0.5.2.jar
+```
+
+The default repository is Maven Central.
+
+---
+
+## Custom Maven Repository
+
+Use `REPOSITORY` to specify another Maven repository:
+
+```cmake
+add_java_library(example
+    GROUP com.example
+    ARTIFACT example
+    VERSION 1.0.0
+    REPOSITORY "https://repo.example.com/maven2"
+    SHA256 "..."
+)
+```
+
+---
+
+## Multiple Libraries
+
+Multiple Maven libraries can be downloaded with `add_java_libraries()`:
 
 ```cmake
 add_java_libraries(
+    HASH_ALGORITHM SHA256
+
     LIBRARIES
-        "com.google.guava:guava:33.0.0-jre"
-        "org.apache.commons:commons-lang3:3.14.0"
+        "org.junit.jupiter:junit-jupiter-api:5.10.0:..."
+        "org.slf4j:slf4j-api:2.0.9:..."
 )
 ```
 
-Format:
+The coordinate format is:
 
+```text
+GROUP:ARTIFACT:VERSION[:HASH]
 ```
-group:artifact:version[:sha256]
+
+For example:
+
+```text
+org.slf4j:slf4j-api:2.0.9:<sha256>
 ```
 
----
-
-## 4. Link Libraries to a Java Target
+The hash algorithm is specified separately:
 
 ```cmake
-add_jar(MyApp
-    SOURCES src/Main.java
-)
+add_java_libraries(
+    HASH_ALGORITHM SHA256
 
-java_link_libraries(MyApp
-    jld::guava
+    LIBRARIES
+        "org.slf4j:slf4j-api:2.0.9:<sha256>"
 )
 ```
 
-JLD automatically sets the correct `-classpath`.
+Supported algorithms:
+
+* `SHA256`
+* `SHA1`
+* `MD5`
+
+If `HASH_ALGORITHM` is omitted, `SHA256` is used.
 
 ---
 
-## 5. Get Classpath Manually
+## Link Libraries to a Java Target
+
+JLD provides `INCLUDE_JARS` for adding JLD libraries to a Java target:
 
 ```cmake
-java_get_classpath(MY_CLASSPATH
-    jld::guava
+add_java_library(aislib
+    GROUP aislib
+    ARTIFACT aislib
+    VERSION 0.5.2
+    SHA256 "..."
 )
 
-message(STATUS "Classpath: ${MY_CLASSPATH}")
+add_java_executable(my_app
+    SOURCES
+        src/Main.java
+
+    INCLUDE_JARS
+        jld::aislib
+)
+```
+
+Multiple JARs can be specified:
+
+```cmake
+add_java_executable(my_app
+    SOURCES
+        src/Main.java
+
+    INCLUDE_JARS
+        jld::aislib
+        jld::junit
+        jld::slf4j
+)
+```
+
+JLD generates the appropriate platform-specific Java classpath.
+
+On Linux/macOS:
+
+```text
+:
+```
+
+On Windows:
+
+```text
+;
 ```
 
 ---
 
-## 6. Run a Java Program
+## Get a Java Classpath
+
+Use `java_get_classpath()` when the classpath is needed directly:
+
+```cmake
+java_get_classpath(
+    CLASSPATH
+    jld::aislib
+)
+
+message(STATUS "Classpath: ${CLASSPATH}")
+```
+
+For multiple libraries:
+
+```cmake
+java_get_classpath(
+    CLASSPATH
+    jld::aislib
+    jld::junit
+    jld::slf4j
+)
+```
+
+---
+
+## Run a Java Application
+
+JLD provides `java_run()` for creating a CMake target that runs a Java main class:
 
 ```cmake
 java_run(run_app
     MAIN_CLASS com.example.Main
-    LIBRARIES jld::guava
-    ARGS arg1 arg2
+
+    LIBRARIES
+        jld::aislib
+
+    ARGS
+        "hello"
+        "world"
 )
 ```
 
-Then execute:
+Then run:
 
 ```bash
-cmake -S . -B build
 cmake --build build --target run_app
 ```
 
 ---
 
-# Security
+## Target Properties
 
-If `SHA256` is provided, downloads are verified automatically.
+Each JLD library target provides the `JLD_JAR` property:
 
-If omitted, a warning is emitted and the file is downloaded without verification.
+```cmake
+get_target_property(
+    JAR
+    jld::aislib
+    JLD_JAR
+)
 
-For production environments, **always provide SHA256** to ensure reproducible and secure builds.
+message(STATUS "JAR: ${JAR}")
+```
 
----
+The same path is also available through `JAR_FILE`:
 
-# Limitations
-
-* No transitive dependency resolution (unlike Maven or Gradle)
-* No automatic POM parsing
-* Downloads occur during the CMake configure step
-
-JLD is intended to be a **minimal, lightweight alternative**, not a full Java build system replacement.
-
----
-
-# Design Philosophy
-
-JLD focuses on:
-
-* Simplicity
-* Portability
-* Zero external tooling
-* Clean CMake integration
-
-If you require full dependency graph management, version conflict resolution, or advanced packaging, consider using Maven or Gradle.
+```cmake
+get_target_property(
+    JAR
+    jld::aislib
+    JAR_FILE
+)
+```
 
 ---
 
-# License
+## Checksum Verification
 
-BSD 3-Clause License
-See `LICENSE` for details.
+JLD can verify downloaded JAR files during the download.
+
+### SHA256
+
+```cmake
+add_java_library(example
+    URL "https://example.com/example.jar"
+    SHA256 "0123456789abcdef..."
+)
+```
+
+### SHA1
+
+```cmake
+add_java_library(example
+    URL "https://example.com/example.jar"
+    SHA1 "0123456789abcdef..."
+)
+```
+
+### MD5
+
+```cmake
+add_java_library(example
+    URL "https://example.com/example.jar"
+    MD5 "0123456789abcdef..."
+)
+```
+
+When a hash is provided, CMake verifies the downloaded file using `file(DOWNLOAD)`.
 
 ---
 
-# Contributing
+## Complete Example
 
-Contributions, bug reports, and suggestions are welcome.
+Project structure:
 
-Please open an issue or submit a pull request.
+```text
+my-project/
+├── CMakeLists.txt
+├── cmake/
+│   └── JLD.cmake
+└── src/
+    └── Main.java
+```
+
+`CMakeLists.txt`:
+
+```cmake
+cmake_minimum_required(VERSION 3.20)
+
+project(MyJavaProject)
+
+find_package(Java REQUIRED)
+
+list(APPEND CMAKE_MODULE_PATH
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+)
+
+include(JLD)
+
+add_java_library(aislib
+    GROUP aislib
+    ARTIFACT aislib
+    VERSION 0.5.2
+    SHA256 "..."
+)
+
+add_java_executable(my_app
+    SOURCES
+        src/Main.java
+
+    INCLUDE_JARS
+        jld::aislib
+)
+```
+
+Configure and build:
+
+```bash
+cmake -S . -B build
+cmake --build build
+```
+
+---
+
+## Testing
+
+JLD includes CMake-based tests for:
+
+* URL validation
+* JAR downloading
+* SHA256/SHA1/MD5 verification
+* Imported target creation
+* Target properties
+* Maven coordinates
+* Multiple library downloads
+* Java classpath generation
+* Java target linking
+
+Configure the test project:
+
+```bash
+cmake -S test -B build-test
+```
+
+Build:
+
+```bash
+cmake --build build-test
+```
+
+Run tests:
+
+```bash
+ctest --test-dir build-test --output-on-failure
+```
+
+---
+
+## License
+
+JLD is distributed under the **OSI-approved BSD 3-Clause License**.

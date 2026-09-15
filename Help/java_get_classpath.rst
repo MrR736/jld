@@ -83,5 +83,4 @@ See Also
 
 - ``add_java_library()``
 - ``add_java_libraries()``
-- ``java_link_libraries()``
 - ``java_run()``

@@ -94,4 +94,3 @@ See Also
 
 - ``java_get_classpath()``
 - ``add_java_libraries()``
-- ``java_link_libraries()``
