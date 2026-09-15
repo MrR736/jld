@@ -5,6 +5,8 @@ cmake_minimum_required(VERSION 3.20)
 
 find_package(Java REQUIRED)
 
+set(JLD_VERSION "1.2" CACHE INTERNAL "JLD version")
+
 set(JLD_CACHE_FILE "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/JLD.cache")
 if(NOT EXISTS "${JLD_CACHE_FILE}")
 	string(RANDOM LENGTH 8 ALPHABET "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" _random)
